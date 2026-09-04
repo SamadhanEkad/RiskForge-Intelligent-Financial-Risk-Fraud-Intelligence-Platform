@@ -16,6 +16,10 @@ data/processed/*.csv
 models/*.pkl
 models/*.joblib
 models/*.onnx
+kaggle.json
+*.json
+!package.json
+!tsconfig.json
 
 # MLflow
 mlruns/

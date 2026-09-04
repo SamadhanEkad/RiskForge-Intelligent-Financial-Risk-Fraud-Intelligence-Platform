@@ -1,0 +1,22 @@
+# Financial Risk & Policy Threshold Configuration
+cost_matrix:
+  # Cost of a False Negative (missed fraud):
+  # In financial services, the merchant or issuer absorbs 100% of the stolen amount
+  # plus fixed banking network chargeback dispute processing fees.
+  chargeback_fixed_fee: 15.00  # USD fee per chargeback incident
+  chargeback_multiplier: 1.0   # 100% of TransactionAmt lost
+
+  # Cost of a False Positive (declining or adding friction to legitimate customer):
+  # Operational cost of handling support contact + customer churn penalty.
+  customer_friction_cost: 5.00 # USD per false alert/inconvenience
+
+decision_thresholds:
+  # Risk Score on a 0 to 100 scale:
+  approve_max: 29.99           # 0 to 29: Auto-Approve (low friction)
+  step_up_max: 69.99          # 30 to 69: Step-Up Verification (2FA / 3D-Secure / OTP)
+  manual_review_max: 89.99    # 70 to 89: Escalate to Fraud Operations Analyst Queue
+  decline_min: 90.00          # 90 to 100: Hard Decline & Freeze Account
+
+analyst_queue:
+  max_daily_capacity: 500     # Maximum alerts the human ops team can review per day
+  priority_weight: "expected_dollar_loss" # Sort queue by score * TransactionAmt

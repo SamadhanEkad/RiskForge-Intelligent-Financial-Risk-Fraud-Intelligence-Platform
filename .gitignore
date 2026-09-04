@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Data and Artifacts (Never commit raw datasets or trained model binaries)
+data/raw/
+data/processed/*.parquet
+data/processed/*.csv
+models/*.pkl
+models/*.joblib
+models/*.onnx
+
+# MLflow
+mlruns/
+.mlflow/
+
+# Jupyter
+.ipynb_checkpoints/
+*-checkpoint.ipynb
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/

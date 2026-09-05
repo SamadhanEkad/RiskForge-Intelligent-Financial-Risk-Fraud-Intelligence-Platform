@@ -1,743 +1,112 @@
-RiskForge — Phase 1 Report (Q&A Format)
+# RiskForge — Phase 1 Report (Q&A Format)
 
-Data Ingestion, Memory Optimization, Cleaning, Feature Engineering & Statistical EDA
+## Data Ingestion, Memory Optimization, Data Cleaning, Feature Engineering & Statistical EDA
 
-Document Metadata
+---
 
-Project: RiskForge — Intelligent Financial Risk & Fraud Intelligence Platform
+### Question 1: What did we do in Phase 1?
 
-Phase: Phase 1 — Data Ingestion, Data Inspection, Cleaning, Feature Engineering & EDA
+**Answer:**
 
-Dataset: IEEE-CIS Fraud Detection Dataset
+We transformed the raw IEEE-CIS Fraud Detection dataset into a clean, memory-efficient, analysis-ready dataset that can be used by all downstream RiskForge modules.
 
-Transactions: 590,540
+The major activities completed in Phase 1 were:
 
-Identity Records: 144,233
+1. **Loaded the complete IEEE-CIS Fraud Detection dataset** containing 590,540 transaction records and 144,233 identity records.
 
-Fraud Rate: ~3.5%
+2. **Inspected the transaction and identity datasets** to understand their schema, data types, missing-value patterns, target distribution, and relationship between transaction and identity information.
 
-Status: Complete & Verified
+3. **Optimized memory usage through numerical downcasting**, reducing the memory footprint of the raw data substantially while preserving the required numerical information.
 
-Primary Output: data/processed/clean_transactions.parquet
+4. **Merged transaction and identity data** using `TransactionID` as the joining key and a left join so that every transaction remained in the final dataset.
 
-Question 1: What did we do in Phase 1?
+5. **Performed missing-value analysis** and identified columns with extremely high missingness.
 
-Answer: We transformed the raw IEEE-CIS Fraud Detection dataset into a reliable, memory-efficient and analysis-ready dataset for the downstream RiskForge fraud-risk pipeline.
+6. **Removed columns with more than 80% missing values** because these columns provide limited reliable information for downstream analysis.
 
-The main activities completed were:
+7. **Removed duplicate transactions** using `TransactionID` to maintain one record per transaction.
 
-Loaded the complete transaction and identity datasets rather than relying only on a small sample.
+8. **Created `has_identity_metadata`**, a binary missingness indicator that captures whether identity/device information is available for a transaction.
 
-Inspected the dataset structure, including columns, data types, missing values and target distribution.
+9. **Standardized operating-system information** into consistent categories such as Windows, iOS, MacOS, Android, Linux, Other, and Unknown.
 
-Applied memory optimization and datatype downcasting to reduce unnecessary RAM usage.
+10. **Standardized browser information** into consistent categories such as Chrome, Safari, Firefox, Edge, IE, Other, and Unknown.
 
-Merged transaction and identity information using TransactionID.
+11. **Handled remaining missing numerical values** using median imputation.
 
-Analyzed missingness and identified highly-missing features.
+12. **Handled categorical missing values** using an appropriate unknown category while preserving pandas categorical data types.
 
-Preserved identity availability as a meaningful signal using has_identity_metadata.
+13. **Engineered additional fraud-risk features** including:
+    - `has_identity_metadata`
+    - `is_high_value`
+    - `amt_log`
+    - `hour`
+    - `email_match`
 
-Standardized operating-system and browser values into consistent categories.
+14. **Performed statistical exploratory data analysis** covering missing values, fraud class imbalance, correlations, transaction amounts, temporal behavior, categorical fraud rates, and identity presence.
 
-Handled numerical and categorical missing values using appropriate strategies.
+15. **Generated eight professional EDA visualizations** and exported them to `reports/figures/`.
 
-Created five analytical features for downstream fraud-risk analysis.
+16. **Saved the cleaned dataset as Parquet**, creating a reusable data source for Phase 2 feature engineering and behavioral analysis.
 
-Performed statistical EDA covering class imbalance, correlations, transaction amounts, financial exposure, categories and temporal behavior.
+---
 
-Generated eight analytical visualizations for technical and stakeholder interpretation.
+### Question 2: Why did we do this? (Business & Engineering Rationale)
 
-Saved the cleaned dataset in Parquet format for efficient downstream processing.
+**Answer:**
 
-Documented the complete Phase 1 workflow in the Jupyter notebook and this report.
+* **To Build a Reliable Data Foundation:** Machine learning models are only as reliable as the data pipeline feeding them. Phase 1 converts inconsistent raw transaction and identity data into a standardized dataset that downstream systems can trust.
 
-Question 2: Why did we do this?
+* **To Reduce Memory Pressure:** The IEEE-CIS dataset contains hundreds of columns and hundreds of thousands of transactions. Loading and processing the complete dataset without memory optimization can create unnecessary RAM pressure and cause notebook or application failures.
 
-Answer: Phase 1 establishes the data foundation for the entire RiskForge platform.
+* **To Preserve Every Transaction:** We used a left join from transaction data to identity data so that the transaction table remains the authoritative base population. Missing identity information is preserved instead of silently removing transactions.
 
-To make large-scale processing practical: The IEEE-CIS dataset is high-dimensional. Memory optimization reduces pressure during operations such as merging, grouping, sorting, feature generation and model preparation.
+* **To Treat Missingness as Information:** In fraud detection, missing identity information may itself contain predictive information. Instead of simply treating missing values as a technical problem, we created `has_identity_metadata` to explicitly capture identity-data availability.
 
-To create a trustworthy downstream dataset: All later feature engineering and modeling phases depend on consistent data types, controlled missing values and a well-defined transaction-level dataset.
+* **To Improve Data Consistency:** Raw browser and operating-system fields contain many variations of the same underlying value. Standardizing them into meaningful families reduces unnecessary category fragmentation.
 
-To preserve fraud-relevant information: Missing identity information can itself contain useful information. Instead of simply discarding this information, RiskForge explicitly represents identity availability.
+* **To Handle Class Imbalance Correctly:** Fraud represents only a small percentage of all transactions. Therefore, raw accuracy can be misleading. Phase 1 establishes the class-imbalance understanding required for more appropriate evaluation metrics such as PR-AUC in later phases.
 
-To understand fraud before modeling: EDA identifies important patterns, limitations and candidate signals before machine-learning models are trained.
+* **To Understand Financial Risk:** Fraud analysis should consider transaction value, not only transaction count. A small number of high-value fraudulent transactions can represent significant financial exposure.
 
-Question 3: What is the Phase 1 data pipeline?
+* **To Understand Temporal Behavior:** Fraud activity may vary by hour and day. Extracting temporal patterns allows later models to identify unusual transaction timing and behavioral deviations.
 
-Answer: The complete workflow is:
+* **To Create a Reusable Dataset:** Saving the cleaned data in Parquet provides a consistent input for future SQL analysis, feature engineering, machine learning, explainability, and deployment components.
 
-Raw Transaction Data
-        +
-Raw Identity Data
-        ↓
-Data Inspection
-        ↓
-Memory Optimization
-        ↓
-TransactionID Left Join
-        ↓
-Missing-Value Analysis
-        ↓
-Data Cleaning
-        ↓
-OS / Browser Standardization
-        ↓
-Feature Engineering
-        ↓
-Statistical EDA
-        ↓
-Business Risk Findings
-        ↓
-Clean Parquet Dataset
-        ↓
-Phase 2
+---
 
-Phase 1 prepares the data and identifies useful signals. It does not train the final fraud-detection models.
+### Question 3: What did the data inspection reveal?
 
-Question 4: What dataset did we use?
+**Answer:**
 
-Answer: RiskForge uses the IEEE-CIS Fraud Detection Dataset, which combines transaction-level information with additional identity and device information.
+The initial inspection produced several important findings:
 
-Transaction Data
+| Finding | Observation | Business / Technical Meaning |
+| :--- | :--- | :--- |
+| Transaction Records | 590,540 | Large enough for robust fraud modeling |
+| Identity Records | 144,233 | Identity information covers only part of the transaction population |
+| Fraud Rate | ~3.5% | Strong class imbalance exists |
+| High-Missingness Columns | 54 columns with more than 50% missingness | Missing data is a major characteristic of the dataset |
+| Identity Availability | Identity metadata is absent for roughly 65% of transactions | Missingness itself can potentially provide fraud-risk information |
+| Dataset Width | Hundreds of transaction + identity columns | Memory optimization is important |
+| Target Variable | `isFraud` | Binary fraud classification problem |
 
-The transaction table contains information such as:
+The most important observation was that **identity information is missing for a large portion of transactions**.
 
-TransactionID
+This led directly to the creation of the `has_identity_metadata` feature.
 
-TransactionDT
+---
 
-TransactionAmt
+### Question 4: How did we optimize memory usage?
 
-Product attributes
+**Answer:**
 
-Card attributes
+The raw IEEE-CIS dataset contains many numerical columns stored using unnecessarily large data types such as `int64` and `float64`.
 
-Address attributes
+We implemented numerical downcasting to use smaller compatible types wherever possible.
 
-Email attributes
+For example:
 
-Numerous anonymized transaction features
-
-Identity Data
-
-The identity table contains additional contextual information such as:
-
-Device information
-
-Operating system
-
-Browser
-
-Device type
-
-Identity/network attributes
-
-The two sources are connected through:
-
-TransactionID
-
-This allows transaction records to be enriched with identity information whenever it is available.
-
-Question 5: How much data was processed?
-
-Answer: Phase 1 used the complete training population:
-
-590,540 transaction records
-+
-144,233 identity records
-
-Using the full dataset is important because fraud is a minority class. Working with an unnecessarily small sample can hide minority-class patterns and produce misleading conclusions.
-
-Question 6: How did we solve the memory problem?
-
-Answer: We implemented reusable datatype optimization through:
-
-src/riskforge/ingestion/downcast.py
-
-The approximate working memory footprint was:
-
-Before optimization : ~1.85 GB
-After optimization  : ~860 MB
-
-This represents a reduction of more than 50% in the working memory footprint.
-
-The optimizer reduces unnecessarily large numeric representations while preserving the information required for analysis.
-
-Why memory optimization matters
-
-590K rows
-   ×
-Hundreds of columns
-   ↓
-Large DataFrame
-   ↓
-High RAM usage
-   ↓
-Merge / GroupBy / Sorting / Feature Engineering
-   ↓
-Possible notebook instability
-
-The optimized representation provides a much more practical foundation for subsequent RiskForge phases.
-
-Question 7: What did data inspection reveal?
-
-Answer: The initial inspection showed substantial missingness, particularly in identity-related features.
-
-A major observation was:
-
-54 columns had >50% missing values
-
-Approximately:
-
-65% of records lacked identity metadata
-
-This is important because missing identity information should not automatically be treated as meaningless missing data.
-
-RiskForge therefore preserves identity availability through:
-
-has_identity_metadata
-
-This feature indicates whether useful identity/device metadata is available for a transaction.
-
-Question 8: How were transaction and identity data merged?
-
-Answer: The transaction and identity datasets were combined using a left join on TransactionID.
-
-df = df_txn.merge(
-    df_id,
-    on="TransactionID",
-    how="left"
-)
-
-Why LEFT JOIN?
-
-The transaction dataset represents the primary transaction population. Every transaction must remain in the final dataset, even when corresponding identity information is unavailable.
-
-Transaction Records
-        │
-        │ LEFT JOIN
-        ▼
-Identity Information
-        │
-        ▼
-All Transactions Preserved
-+
-Identity Data When Available
-
-This is especially important because identity absence is itself retained as a potential fraud-risk signal.
-
-Question 9: How did we handle missing values?
-
-Answer: Missing values were handled according to the data type and business meaning.
-
-The cleaning workflow included:
-
-Identifying columns with excessive missingness.
-
-Removing columns exceeding the configured high-missingness threshold.
-
-Checking duplicate TransactionID values.
-
-Preserving identity availability before imputation.
-
-Standardizing OS and browser information.
-
-Filling numerical missing values using median values.
-
-Representing remaining categorical missing values as unknown.
-
-The categorical handling was implemented safely for pandas categorical columns by adding the required category before filling missing values.
-
-This prevents errors such as:
-
-TypeError:
-Cannot setitem on a Categorical with a new category
-
-Question 10: How did we clean OS and browser information?
-
-Answer: Raw identity fields can contain many inconsistent string representations. We standardized them into meaningful families.
-
-Operating System
-
-Windows
-iOS
-MacOS
-Android
-Linux
-Other
-Unknown
-
-Browser
-
-Chrome
-Safari
-Firefox
-Edge
-IE
-Other
-Unknown
-
-The standardized fields are:
-
-os_clean
-browser_clean
-
-This makes the identity information easier to analyze and use in downstream modeling.
-
-Question 11: What features were engineered?
-
-Answer: Five analytical features were created to capture useful fraud-risk information.
-
-Feature
-
-Meaning
-
-has_identity_metadata
-
-Indicates whether identity/device information is available
-
-is_high_value
-
-Identifies transactions above the selected high-value threshold
-
-amt_log
-
-Log-transformed transaction amount for reducing amount skew
-
-hour
-
-Transaction hour derived from transaction time
-
-email_match
-
-Email-domain consistency signal
-
-These features are intentionally interpretable so their behavior can be investigated before advanced modeling.
-
-Question 12: What did the target distribution show?
-
-Answer: Fraud represents approximately:
-
-~3.5% of transactions
-
-This confirms a strong class imbalance.
-
-Therefore, accuracy should not be used as the only model evaluation metric.
-
-Later modeling phases should emphasize:
-
-PR-AUC
-Precision
-Recall
-F1 Score
-Confusion Matrix
-Financial Cost / Expected Loss
-
-For a fraud-detection system, the cost of missed fraud and unnecessary intervention must also be considered.
-
-Question 13: Why did we analyze financial exposure?
-
-Answer: Fraud risk cannot be understood only by counting fraudulent transactions.
-
-We therefore compared:
-
-Fraud Transaction Count
-        vs.
-Fraud Dollar Exposure
-
-A relatively small number of fraudulent transactions can still represent substantial financial exposure if transaction values are high.
-
-This establishes an important RiskForge principle:
-
-Financial risk depends on both fraud frequency and the monetary value exposed to fraud.
-
-This principle will become increasingly important when RiskForge moves toward cost-sensitive scoring and decision thresholds.
-
-Question 14: What did temporal analysis contribute?
-
-Answer: Transaction time was transformed into interpretable temporal information, including:
-
-hour
-day_of_week
-
-Fraud rates were then examined across time periods using statistical analysis and a temporal heatmap.
-
-This provides an initial understanding of when fraudulent activity is more concentrated.
-
-These temporal signals provide the foundation for Phase 2 features such as:
-
-Transaction velocity
-Rolling activity
-Behavioral deviation
-Time-based risk patterns
-
-Question 15: What did correlation and initial signal analysis show?
-
-Answer: Initial analysis identified:
-
-has_identity_metadata
-is_high_value
-
-among the stronger observed signals examined during Phase 1.
-
-The important interpretation is that identity availability and transaction-value behavior appear to contain useful information for distinguishing fraudulent and legitimate transactions.
-
-However, these are EDA associations, not proof of causation.
-
-The signals will be validated rigorously during later model-development phases using proper train/validation/test evaluation.
-
-Question 16: What visualizations were created?
-
-Answer: Phase 1 generated 8 analytical EDA figures covering the major fraud-risk dimensions.
-
-The figures include:
-
-Figure
-
-Analysis
-
-01_missing_value_audit.png
-
-Missing-value structure
-
-02_class_imbalance_donut.png
-
-Fraud vs. legitimate distribution
-
-03_correlation_heatmap.png
-
-Initial feature relationships
-
-04_dollar_asymmetry.png
-
-Transaction count vs. financial exposure
-
-05_temporal_heatmap.png
-
-Fraud behavior across time
-
-06_amount_distribution.png
-
-Transaction amount behavior
-
-07_fraud_rate_by_category.png
-
-Category-level fraud patterns
-
-08_identity_presence_fraud.png
-
-Identity availability vs. fraud
-
-All figures are stored under:
-
-reports/figures/
-
-Question 17: What are the key findings from Phase 1?
-
-Answer: Phase 1 produced six major findings.
-
-Finding 1 — Fraud is highly imbalanced
-
-Approximately:
-
-3.5% of transactions
-
-are fraudulent.
-
-Implication: Accuracy alone is not an appropriate primary metric.
-
-Finding 2 — Identity information is frequently missing
-
-Approximately:
-
-65% of records
-
-lack identity metadata.
-
-Implication: Identity availability should be represented explicitly rather than treated only as a missing-value problem.
-
-Finding 3 — High-missingness features require controlled handling
-
-54 columns >50% missing
-
-were identified during inspection.
-
-Implication: Feature availability and missingness must be considered before model development.
-
-Finding 4 — Financial exposure matters
-
-Fraud must be examined using both:
-
-Number of fraudulent transactions
-
-and:
-
-Financial amount associated with fraud
-
-Implication: Future RiskForge decisions should consider financial cost rather than classification performance alone.
-
-Finding 5 — Time contains behavioral information
-
-Fraud activity varies across time.
-
-Implication: Temporal features can support behavioral baselines and velocity detection in Phase 2.
-
-Finding 6 — Engineered features provide interpretable initial signals
-
-Features such as:
-
-has_identity_metadata
-is_high_value
-amt_log
-hour
-email_match
-
-provide useful, interpretable inputs for later modeling.
-
-Question 18: What are the main Phase 1 project artifacts?
-
-Answer: Phase 1 produced the following reusable project components.
-
-File / Directory
-
-Purpose
-
-src/riskforge/ingestion/schema.py
-
-Defines important dataset column groups and schema structure
-
-src/riskforge/ingestion/downcast.py
-
-Performs memory-efficient datatype optimization
-
-src/riskforge/ingestion/cleaner.py
-
-Handles merging, cleaning and missing-value processing
-
-src/riskforge/utils/plotting.py
-
-Provides reusable plotting and figure-export utilities
-
-scripts/download_data.py
-
-Supports dataset acquisition
-
-scripts/generate_sample_data.py
-
-Generates deterministic sample data for lightweight testing
-
-scripts/run_phase1_eda.py
-
-Automates Phase 1 visual EDA generation
-
-notebooks/01_data_ingestion_and_eda.ipynb
-
-Interactive Phase 1 analysis and walkthrough
-
-data/processed/clean_transactions.parquet
-
-Clean downstream-ready dataset
-
-reports/figures/
-
-Phase 1 analytical visualizations
-
-reports/phase_reports/
-
-Phase documentation
-
-Question 19: Why did we save the cleaned dataset as Parquet?
-
-Answer: The cleaned dataset is stored as:
-
-data/processed/clean_transactions.parquet
-
-Parquet is a good format for downstream analytical workloads because it is:
-
-Columnar
-
-Compressed
-
-Type-aware
-
-Efficient for selective column reads
-
-Well suited to repeated analytical processing
-
-This avoids repeatedly rebuilding the cleaned dataset from the original CSV files.
-
-Question 20: What quality checks were completed?
-
-Answer: Phase 1 was considered complete only after validating the main data-processing steps.
-
-The workflow verified:
-
-Transaction and identity datasets loaded successfully.
-
-Transaction and identity records were merged using TransactionID.
-
-Duplicate transaction IDs were checked.
-
-High-missingness columns were controlled.
-
-Identity availability was captured before imputation.
-
-Numerical missing values were handled.
-
-Categorical missing values were handled safely.
-
-OS and browser values were standardized.
-
-Engineered features were generated.
-
-EDA visualizations were exported.
-
-The cleaned dataset was written to Parquet.
-
-The Phase 1 notebook completed successfully.
-
-The final Phase 1 state is therefore:
-
-Complete & Verified
-
-Question 21: What is the Phase 1 architecture?
-
-Answer: The Phase 1 architecture is:
-
-IEEE-CIS Raw Data
-        │
-        ├────────────────┐
-        ▼                ▼
- Transactions        Identity
-        │                │
-        └───────┬────────┘
-                ▼
-              Merge
-                │
-                ▼
-        Data Inspection
-                │
-                ▼
-       Memory Optimization
-                │
-                ▼
-         Data Cleaning
-                │
-        ┌───────┼────────┐
-        ▼       ▼        ▼
-    Missing    OS      Browser
-    Values   Cleaning  Cleaning
-        │       │        │
-        └───────┼────────┘
-                ▼
-       Feature Engineering
-                │
-                ▼
-          Statistical EDA
-                │
-        ┌───────┼───────────────┐
-        ▼       ▼               ▼
-    Imbalance Financial       Temporal
-              Exposure         Patterns
-        │       │               │
-        └───────┼───────────────┘
-                ▼
-      Clean Parquet Dataset
-                │
-                ▼
-            Phase 2
-
-Question 22: What is the final output of Phase 1?
-
-Answer: Phase 1 produced a complete data foundation for RiskForge.
-
-The primary downstream dataset is:
-
-data/processed/clean_transactions.parquet
-
-The supporting outputs include:
-
-notebooks/01_data_ingestion_and_eda.ipynb
-
-reports/figures/
-    ├── 01_missing_value_audit.png
-    ├── 02_class_imbalance_donut.png
-    ├── 03_correlation_heatmap.png
-    ├── 04_dollar_asymmetry.png
-    ├── 05_temporal_heatmap.png
-    ├── 06_amount_distribution.png
-    ├── 07_fraud_rate_by_category.png
-    └── 08_identity_presence_fraud.png
-
-reports/phase_reports/
-    └── PHASE_01_INGESTION_AND_EDA.md
-
-Question 23: What is the handoff from Phase 1 to Phase 2?
-
-Answer: Phase 1 provides the clean and structured transaction-level foundation required for behavioral feature engineering.
-
-Phase 2 will build on this foundation by introducing:
-
-SQL / DuckDB Feature Engineering
-        ↓
-1-Hour Transaction Velocity
-        ↓
-24-Hour Rolling Spend
-        ↓
-Customer Behavioral Baselines
-        ↓
-Amount Z-Scores
-        ↓
-Historical Deviation Features
-
-The objective is to move from describing individual transactions toward understanding transaction behavior over time.
-
-Final Phase 1 Outcome
-
-Phase 1 is COMPLETE & VERIFIED.
-
-RiskForge now has:
-
-590,540 transaction records processed.
-
-144,233 identity records integrated where available.
-
-50%+ memory reduction through datatype optimization.
-
-A controlled missing-value strategy.
-
-Standardized OS and browser information.
-
-5 interpretable analytical features.
-
-Statistical and visual fraud EDA.
-
-8 Phase 1 analytical figures.
-
-A reusable clean Parquet dataset.
-
-A documented and reproducible Phase 1 pipeline.
-
-Phase 2 → Behavioral Feature Engineering
-
-The next stage of RiskForge will move from data preparation and statistical understanding to behavioral fraud intelligence.
-
-Phase 1
-Data Foundation
-      ↓
-Phase 2
-Behavioral & Velocity Features
-      ↓
-Phase 3
-Graph Fraud Intelligence
-      ↓
-Phase 4
-Modeling & Anomaly Detection
-      ↓
-Phase 5+
-Explainability, NLP, Decisioning,
-Deployment & MLOps
-
-RiskForge Phase 1 — COMPLETE ✓
+```text
+int64  → int32 / int16 / int8
+float64 → float32
